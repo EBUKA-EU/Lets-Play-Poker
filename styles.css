@@ -1,0 +1,53 @@
+body {
+    background: radial-gradient(circle at center, #0b6623, #044d1f);
+    min-height: 100vh;
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.table-felt {
+    background: radial-gradient(circle, #15803d, #065f46);
+    border-radius: 20px;
+    padding: 40px 20px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+    border: 3px solid #bfa14a;
+}
+
+.card-slot img {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-slot img:hover {
+    transform: translateY(-6px) scale(1.05);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.6);
+}
+
+.card-selected {
+    border: 3px solid #dc3545 !important;
+    box-shadow: 0 0 15px rgba(220, 53, 69, 0.9);
+    transform: translateY(-8px) scale(1.05);
+}
+
+.game-title {
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-shadow: 0 3px 10px rgba(0, 0, 0, 0.7);
+}
+
+.hand-label {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #facc15;
+}
+
+.poker-btn {
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 12px 28px;
+}
+
+.footer-text {
+    font-size: 0.9rem;
+    opacity: 0.85;
+}
