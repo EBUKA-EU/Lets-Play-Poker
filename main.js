@@ -1,202 +1,273 @@
 // Link in ES-module version of Vue from CDN
-import { createApp } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';;
+import { createApp } from "https://unpkg.com/vue@3/dist/vue.esm-browser.js";
 
 createApp({
-    data() {
-        return {
-            deckId: null,
-            hand: [],
-            buttonText: " Draw New Hand",
-            instructionText: `No cards drawn yet. Click "Draw New Hand" to get started`,
-            loading: false,
-            error: null,
-            drawCount: 0,
-            handResult: "",
-            gameMode: "basic",
-            texasHole: [],
-            texasCommunity: [],
-            phase: "idle",       // "idle","hand","flop","turn","river","reset"
-            texasButtonText: "Deal Hand",
-            texasInstruction: "Click 'Deal Hand' to begin",
-            texasBestHand: "Waiting for more cards..."
+  data() {
+    return {
+      deckId: null,
+      hand: [],
+      buttonText: " Draw New Hand",
+      instructionText: `No cards drawn yet. Click "Draw New Hand" to get started`,
+      loading: false,
+      error: null,
+      drawCount: 0,
+      handResult: "",
+      gameMode: "basic",
+      texasHole: [],
+      texasCommunity: [],
+      phase: "idle", // "idle","hand","flop","turn","river","reset"
+      texasButtonText: "Deal Hand",
+      texasInstruction: "Click 'Deal Hand' to begin",
+      texasBestHand: "Waiting for more cards...",
+    };
+  },
+  methods: {
+    async drawNewHand() {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        if (this.drawCount === 0) {
+          // First time: shuffle a new deck
+          const shuffleResponse = await fetch(
+            "https://deckofcardsapi.com/api/deck/new/shuffle/?deck_count=1"
+          );
+          const deck = await shuffleResponse.json();
+          this.deckId = deck.deck_id;
         }
+
+        if (this.drawCount === 0) {
+          // Initially draw 5 cards from current deckId
+          const apiCardUrl = `https://deckofcardsapi.com/api/deck/${this.deckId}/draw/?count=5`;
+          const drawCardResponse = await fetch(apiCardUrl);
+          const drawCards = await drawCardResponse.json();
+          this.hand = drawCards.cards.map((card) => ({
+            ...card,
+            selected: false,
+          }));
+        } else {
+          // Replace card based on whether they are selected or not
+          const selectedCount = this.hand.filter(
+            (card) => card.selected
+          ).length;
+          if (selectedCount > 0) {
+            const newApiCardUrl = `https://deckofcardsapi.com/api/deck/${this.deckId}/draw/?count=${selectedCount}`;
+            const newResponse = await fetch(newApiCardUrl);
+            const replacementCards = await newResponse.json();
+
+            // Replace selected cards
+            let i = 0;
+            this.hand = this.hand.map((card) => {
+              if (card.selected) {
+                const replacement = replacementCards.cards[i++];
+                return { ...replacement, selected: false };
+              } else {
+                return card;
+              }
+            });
+          } else {
+            return;
+          }
+        }
+
+        this.drawCount++;
+
+        this.buttonText =
+          this.drawCount <= 2 ? "Draw Replacement Hand" : "Draw New Hand";
+        this.instructionText =
+          this.drawCount <= 2
+            ? "Click on cards to flip and mark for replacement. You can swap twice."
+            : "You've reached the max swaps. Draw a new hand";
+
+        if (this.drawCount > 2) {
+          this.drawCount = 0;
+        }
+      } catch (error) {
+        this.error = "Failed to fetch data from the API.";
+      } finally {
+        this.loading = false;
+      }
+
+      const result = this.evaluateFiveCardHand(this.hand);
+      this.handResult = result.name;
     },
-    methods: {
-        async drawNewHand() {
-            this.loading = true;
-            this.error = null;
+    toggleCard(index) {
+      this.hand[index].selected = !this.hand[index].selected;
+    },
+    evaluateFiveCardHand(cards) {
+      if (!cards || cards.length < 5) return "";
+      const values = cards.map((card) => card.value);
+      const suits = cards.map((card) => card.suit);
 
-            try {
-                if (this.drawCount === 0) {
-                    // First time: shuffle a new deck
-                    const shuffleResponse = await fetch("https://deckofcardsapi.com/api/deck/new/shuffle/?deck_count=1");
-                    const deck = await shuffleResponse.json();
-                    this.deckId = deck.deck_id;
-                }
+      const valueMap = {
+        ACE: 14,
+        KING: 13,
+        QUEEN: 12,
+        JACK: 11,
+        10: 10,
+        9: 9,
+        8: 8,
+        7: 7,
+        6: 6,
+        5: 5,
+        4: 4,
+        3: 3,
+        2: 2,
+      };
 
-                if (this.drawCount === 0) {
-                    // Initially draw 5 cards from current deckId
-                    const apiCardUrl = `https://deckofcardsapi.com/api/deck/${this.deckId}/draw/?count=5`;
-                    const drawCardResponse = await fetch(apiCardUrl);
-                    const drawCards = await drawCardResponse.json();
-                    this.hand = drawCards.cards.map(card => ({ ...card, selected: false }));
-                } else {
-                    // Replace card based on whether they are selected or not
-                    const selectedCount = this.hand.filter(card => card.selected).length;
-                    if (selectedCount > 0) {
-                        const newApiCardUrl = `https://deckofcardsapi.com/api/deck/${this.deckId}/draw/?count=${selectedCount}`;
-                        const newResponse = await fetch(newApiCardUrl);
-                        const replacementCards = await newResponse.json();
+      const cardNumericValues = values
+        .map((value) => valueMap[value])
+        .sort((a, b) => a - b);
 
-                        // Replace selected cards
-                        let i = 0;
-                        this.hand = this.hand.map(card => {
-                            if (card.selected) {
-                                const replacement = replacementCards.cards[i++];
-                                return { ...replacement, selected: false };
-                            } else {
-                                return card;
-                            }
-                        });
-                    } else { return }
-                }
+      const counts = {};
+      cardNumericValues.forEach(
+        (value) => (counts[value] = (counts[value] || 0) + 1)
+      );
+      const countValues = Object.values(counts).sort((a, b) => b - a);
 
+      const isFlush = suits.every((suit) => suit === suits[0]);
 
-                this.drawCount++;
+      const isStraight = cardNumericValues.every(
+        (value, index, array) => index === 0 || value === array[index - 1] + 1
+      );
 
-                this.buttonText = this.drawCount <= 2 ? "Draw Replacement Hand" : "Draw New Hand";
-                this.instructionText = this.drawCount <= 2
-                    ? "Click on cards to flip and mark for replacement. You can swap twice."
-                    : "You've reached the max swaps. Draw a new hand";
+      const aceLowStraight =
+        JSON.stringify(cardNumericValues) === JSON.stringify([2, 3, 4, 5, 14]);
 
-                if (this.drawCount > 2) {
-                    this.drawCount = 0;
-                }
-            } catch (error) {
-                this.error = "Failed to fetch data from the API.";
-            } finally {
-                this.loading = false;
+      const handRankings = {
+        "Royal Flush": 10,
+        "Straight Flush": 9,
+        "Four of a Kind": 8,
+        "Full House": 7,
+        "Flush": 6,
+        "Straight": 5,
+        "Three of a Kind": 4,
+        "Two Pair": 3,
+        "One Pair": 2,
+        "High Card": 1,
+      };
+
+      let name = "High Card";
+
+      if (isStraight && isFlush && cardNumericValues[0] === 14)
+        name = "Royal Flush";
+      else if (isStraight && isFlush) name = "Straight Flush";
+      else if (countValues[0] === 4) name = "Four of a Kind";
+      else if (countValues[0] === 3 && countValues[1] === 2)
+        name = "Full House";
+      else if (isFlush) name = "Flush";
+      else if (isStraight || aceLowStraight) name = "Straight";
+      else if (countValues[0] === 3) name = "Three of a Kind";
+      else if (countValues[0] === 2 && countValues[1] === 2) name = "Two Pair";
+      else if (countValues[0] === 2) name = "One Pair";
+      return { name, rank: handRankings[name] };
+    },
+
+    getFiveCardCombinations(cards) {
+      const combos = [];
+      const cardsLength = cards.length;
+
+      for (let i = 0; i < cardsLength; i++) {
+        for (let j = i + 1; j < cardsLength; j++) {
+          for (let k = j + 1; k < cardsLength; k++) {
+            for (let l = k + 1; l < cardsLength; l++) {
+              for (let m = l + 1; m < cardsLength; m++) {
+                combos.push([cards[i], cards[j], cards[k], cards[l], cards[m]]);
+              }
             }
+          }
+        }
+      }
+      return combos;
+    },
 
-            this.handResult = this.evaluateHand()
-        },
-        toggleCard(index) {
-            this.hand[index].selected = !this.hand[index].selected;
-        },
-        evaluateHand() {
-            if (!this.hand || this.hand.length < 5) return "";
-            const values = this.hand.map(card => card.value);
-            const suits = this.hand.map(card => card.suit);
+    switchMode(mode) {
+      this.gameMode = mode;
+      if (mode === "texas") this.resetTexas();
+    },
 
-            const valueMap = {
-                "ACE": 14, "KING": 13, "QUEEN": 12, "JACK": 11, "10": 10, "9": 9, "8": 8, "7": 7, "6": 6, "5": 5, "4": 4, "3": 3, "2": 2
-            };
+    resetTexas() {
+      this.texasHole = [];
+      this.texasCommunity = [];
+      this.phase = "idle";
+      this.texasButtonText = "Deal Hand";
+      this.texasInstruction = "Click 'Deal Hand' to begin";
+      this.texasBestHand = "Waiting for more cards...";
+    },
 
-            const cardNumericValues = values.map(value => valueMap[value]).sort((a, b) => (a - b));
+    async texasAction() {
+      this.loading = true;
 
-            const counts = {};
-            cardNumericValues.forEach(value => counts[value] = (counts[value] || 0) + 1);
-            const countValues = Object.values(counts).sort((a, b) => (b - a));
+      try {
+        if (!this.deckId) {
+          const res = await fetch(
+            "https://deckofcardsapi.com/api/deck/new/shuffle/"
+          );
+          const deck = await res.json();
+          this.deckId = deck.deck_id;
+        }
 
-            const isFlush = suits.every(suit => suit === suits[0]);
+        if (this.phase === "idle") {
+          const draw = await fetch(
+            `https://deckofcardsapi.com/api/deck/${this.deckId}/draw/?count=2`
+          );
+          const data = await draw.json();
 
-            const isStraight = cardNumericValues.every((value, index, array) => index === 0 || value === array[index - 1] + 1);
+          this.texasHole = data.cards;
+          this.phase = "preflop";
+          this.texasButtonText = "Deal Flop";
+          this.texasInstruction = "Your Hand";
+        } else if (this.phase === "preflop") {
+          await this.drawCommunity(3);
+          this.phase = "flop";
+          this.texasButtonText = "Deal Turn";
+          this.updateTexasHand();
+        } else if (this.phase === "flop") {
+          await this.drawCommunity(1);
+          this.phase = "turn";
+          this.texasButtonText = "Deal River";
+          this.updateTexasHand();
+        } else if (this.phase === "turn") {
+          await this.drawCommunity(1);
+          this.phase = "done";
+          this.texasButtonText = "Reset Game";
+          this.updateTexasHand();
+        } else if (this.phase === "done") {
+          this.resetTexas();
+        }
+      } catch (error) {
+        this.error = "Texas Hold'em API error";
+      } finally {
+        this.loading = false;
+      }
+    },
 
-            const aceLowStraight = JSON.stringify(cardNumericValues) === JSON.stringify([2, 3, 4, 5, 14]);
+    async drawCommunity(count) {
+      const res = await fetch(
+        `https://deckofcardsapi.com/api/deck/${this.deckId}/draw/?count=${count}`
+      );
+      const data = await res.json();
+      this.texasCommunity.push(...data.cards);
+    },
 
-            if (isStraight && isFlush && cardNumericValues[0] === 14) return "Royal Flush";
-            if (isStraight && isFlush) return "Straight Flush";
-            if (countValues[0] === 4) return "Four of a Kind";
-            if (countValues[0] === 3 && countValues[1] === 2) return "Full House";
-            if (isFlush) return "Flush";
-            if (isStraight || aceLowStraight) return "Straight";
-            if (countValues[0] === 3) return "Three of a Kind";
-            if (countValues[0] === 2 && countValues[1] === 2) return "Two Pair";
-            if (countValues[0] === 2) return "One Pair";
-            return "High Card";
-        },
-        switchMode(mode) {
-            this.gameMode = mode;
-            if (mode === "texas") this.resetTexas();
-        },
+    updateTexasHand() {
+      const allCards = [...this.texasHole, ...this.texasCommunity];
+      if (allCards.length < 5) {
+        this.texasBestHand = "Waiting for more cards...";
+        return;
+      }
 
-        resetTexas() {
-            this.texasHole = [];
-            this.texasCommunity = [];
-            this.phase = "idle";
-            this.texasButtonText = "Deal Hand";
-            this.texasInstruction = "Click 'Deal Hand' to begin";
-            this.texasBestHand = "Waiting for more cards...";
-        },
+      const combinations = this.getFiveCardCombinations(allCards);
 
-        async texasAction() {
-            this.loading = true;
+      let hand = null;
+      for (const combination of combinations) {
+        const result = this.evaluateFiveCardHand(combination);
+        if (!hand || result.rank > hand.rank) {
+          hand = result;
+        }
+      }
 
-            try {
-                if (!this.deckId) {
-                    const res = await fetch("https://deckofcardsapi.com/api/deck/new/shuffle/");
-                    const deck = await res.json();
-                    this.deckId = deck.deck_id;
-                }
-
-                if (this.phase === "idle") {
-                    const draw = await fetch(`https://deckofcardsapi.com/api/deck/${this.deckId}/draw/?count=2`);
-                    const data = await draw.json();
-
-                    this.texasHole = data.cards;
-                    this.phase = "preflop";
-                    this.texasButtonText = "Deal Flop";
-                    this.texasInstruction = "Your Hand";
-                }
-
-                else if (this.phase === "preflop") {
-                    await this.drawCommunity(3);
-                    this.phase = "flop";
-                    this.texasButtonText = "Deal Turn";
-                    this.updateTexasHand();
-                }
-
-                else if (this.phase === "flop") {
-                    await this.drawCommunity(1);
-                    this.phase = "turn";
-                    this.texasButtonText = "Deal River";
-                    this.updateTexasHand();
-                }
-
-                else if (this.phase === "turn") {
-                    await this.drawCommunity(1);
-                    this.phase = "done";
-                    this.texasButtonText = "Reset Game";
-                    this.updateTexasHand();
-                }
-
-                else if (this.phase === "done") {
-                    this.resetTexas();
-                }
-
-            } catch (error) {
-                this.error = "Texas Hold'em API error";
-            } finally {
-                this.loading = false;
-            }
-        },
-
-        async drawCommunity(count) {
-            const res = await fetch(`https://deckofcardsapi.com/api/deck/${this.deckId}/draw/?count=${count}`);
-            const data = await res.json();
-            this.texasCommunity.push(...data.cards);
-        },
-
-        updateTexasHand() {
-            const allCards = [...this.texasHole, ...this.texasCommunity];
-            if (allCards.length < 5) {
-                this.texasBestHand = "Waiting for more cards...";
-                return;
-            }
-
-            this.hand = allCards.slice(0, 5);
-            this.texasBestHand = this.evaluateHand();
-        },
-    }
-
+      this.texasBestHand = hand.name;
+    },
+  },
 }).mount("#app");
