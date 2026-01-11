@@ -25,6 +25,7 @@
             </button>
         </div>
 
+        <!-- Basic Poker -->
         <div v-if="gameMode === 'basic'">
             <div class="row justify-content-center">
                 <div class="col-lg-10 col-xl-8 table-felt">
@@ -54,37 +55,45 @@
             </div>
         </div>
 
+        <!-- Texas Hold'em -->
         <div v-if="gameMode === 'texas'">
+            <div class="row justify-content-center">
+                <div class="col-lg-10 col-xl-8 table-felt">
 
-            <h2 class="mb-3 game-title">Texas Hold'em</h2>
+                    <h2 class="mb-4 game-title">Texas Hold'em</h2>
 
-            <button class="btn btn-warning poker-btn mb-3" @click="texasAction">
-                {{ texasButtonText }}
-            </button>
+                    <button class="btn btn-warning poker-btn mb-4" @click="texasAction">
+                        {{ texasButtonText }}
+                    </button>
 
-            <p class="hand-label">{{ texasInstruction }}</p>
+                    <p class="hand-label">{{ texasInstruction }}</p>
 
-            <div v-if="texasHole.length" class="mb-3">
-                <div class="row justify-content-center">
-                    <div v-for="card in texasHole" :key="card.code" class="col-6 col-sm-2">
-                        <img :src="card.image" class="img-fluid rounded shadow">
+                    <!-- Hole Cards -->
+                    <div v-if="texasHole.length" class="mb-4">
+                        <div class="row justify-content-center">
+                            <div v-for="card in texasHole" :key="card.code" class="col-6 col-sm-2 texas-card mb-3">
+                                <img :src="card.image" class="img-fluid rounded shadow">
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Community Cards -->
+                    <div v-if="phase !== 'idle'">
+                        <h5 class="mt-3 game-title">Community Cards</h5>
+                        <div class="row justify-content-center mt-3">
+                            <div v-for="card in texasCommunity" :key="card.code" class="col-4 col-sm-2 texas-card mb-3">
+                                <img :src="card.image" class="img-fluid rounded shadow">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Best Hand -->
+                    <div v-if="phase !== 'idle'" class="alert alert-success mt-4 fw-bold fs-5 shadow-sm">
+                        Best Hand: {{ texasBestHand }}
+                    </div>
+
                 </div>
             </div>
-
-            <div v-if="phase !== 'idle'">
-                <h5 class="mt-3">Community Cards</h5>
-                <div class="row justify-content-center">
-                    <div v-for="card in texasCommunity" :key="card.code" class="col-4 col-sm-2">
-                        <img :src="card.image" class="img-fluid rounded shadow">
-                    </div>
-                </div>
-            </div>
-
-            <div v-if="phase !== 'idle'" class="alert alert-success mt-3 fw-bold">
-                Best Hand: {{ texasBestHand }}
-            </div>
-
         </div>
 
     </div>
