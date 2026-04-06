@@ -4,7 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vue 3 Poker Hand</title>
+    <title>Let's Play Poker</title>
+    <meta name="description"
+        content="A Vue 3 poker app featuring 5-Card Draw and Texas Hold'em with real-time hand evaluation via the Deck of Cards API.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -25,7 +27,7 @@
             </button>
         </div>
 
-        <!-- Basic Poker -->
+        <!-- ===================== Basic 5-Card Draw Mode ===================== -->
         <div v-if="gameMode === 'basic'">
             <div class="row justify-content-center">
                 <div class="col-lg-10 col-xl-8 table-felt">
@@ -55,7 +57,7 @@
             </div>
         </div>
 
-        <!-- Texas Hold'em -->
+        <!-- ======================== Texas Hold'em Mode ======================== -->
         <div v-if="gameMode === 'texas'">
             <div class="row justify-content-center">
                 <div class="col-lg-10 col-xl-8 table-felt">
@@ -68,7 +70,7 @@
 
                     <p class="hand-label">{{ texasInstruction }}</p>
 
-                    <!-- Hole Cards -->
+                    <!-- Player's private hole cards -->
                     <div v-if="texasHole.length" class="mb-4">
                         <div class="row justify-content-center">
                             <div v-for="card in texasHole" :key="card.code" class="col-6 col-sm-2 texas-card mb-3">
@@ -77,7 +79,7 @@
                         </div>
                     </div>
 
-                    <!-- Community Cards -->
+                    <!-- Shared community cards revealed in stages -->
                     <div v-if="phase !== 'idle'">
                         <h5 class="mt-3 game-title">Community Cards</h5>
                         <div class="row justify-content-center mt-3">
@@ -87,7 +89,7 @@
                         </div>
                     </div>
 
-                    <!-- Best Hand -->
+                    <!-- Best evaluated hand from all available cards -->
                     <div v-if="phase !== 'idle'" class="alert alert-success mt-4 fw-bold fs-5 shadow-sm">
                         Best Hand: {{ texasBestHand }}
                     </div>

@@ -1,3 +1,13 @@
+/**
+ * styles.css — Let's Play Poker
+ *
+ * Custom styles for the poker application.
+ * Works alongside Bootstrap 5 to establish a casino-themed UI:
+ *   - Deep green felt background and table surface
+ *   - Card hover and selection animations
+ *   - Typography and color tokens for the poker theme
+ */
+
 body {
     background: radial-gradient(circle at center, #0b6623, #044d1f);
     min-height: 100vh;
